@@ -65,21 +65,25 @@ export const fundApi = {
 
 const SETTINGS_KEY = 'fund-board-settings';
 
+const defaultSettings: import('./types').UserSettings = {
+  autoRefresh: false,
+  refreshInterval: 60,
+  sortField: null,
+  sortOrder: 'desc',
+  darkMode: false,
+};
+
 export const settingsApi = {
   getSettings: (): import('./types').UserSettings => {
     try {
       const saved = localStorage.getItem(SETTINGS_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        return { ...defaultSettings, ...JSON.parse(saved) };
       }
-    } catch {}
-    return {
-      autoRefresh: false,
-      refreshInterval: 60,
-      sortField: null,
-      sortOrder: 'desc',
-      darkMode: false,
-    };
+    } catch {
+      // ignore parse errors
+    }
+    return defaultSettings;
   },
   
   saveSettings: (settings: import('./types').UserSettings) => {
@@ -100,7 +104,9 @@ export const cacheApi = {
           return data;
         }
       }
-    } catch {}
+    } catch {
+      // ignore parse errors
+    }
     return null;
   },
   

@@ -10,6 +10,19 @@ interface FundTableProps {
   onSort: (field: string) => void;
 }
 
+interface SortIconProps {
+  field: string;
+  sortField: string | null;
+  sortOrder: 'asc' | 'desc';
+}
+
+function SortIcon({ field, sortField, sortOrder }: SortIconProps) {
+  if (sortField !== field) {
+    return <span className="ml-1 text-gray-300 dark:text-gray-600">↕</span>;
+  }
+  return <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>;
+}
+
 export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart, sortField, sortOrder, onSort }: FundTableProps) {
   const formatNumber = (num: number | string, decimals = 2) => {
     const value = typeof num === 'string' ? parseFloat(num) : num;
@@ -27,13 +40,6 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
     }
     return bValue - aValue;
   });
-
-  const SortIcon = ({ field }: { field: string }) => {
-    if (sortField !== field) {
-      return <span className="ml-1 text-gray-300 dark:text-gray-600">↕</span>;
-    }
-    return <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>;
-  };
 
   if (originalFunds.length === 0) {
     return (
@@ -71,25 +77,25 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
                 className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                 onClick={() => onSort('dailyChange')}
               >
-                日涨跌 <SortIcon field="dailyChange" />
+                日涨跌 <SortIcon field="dailyChange" sortField={sortField} sortOrder={sortOrder} />
               </th>
               <th 
                 className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                 onClick={() => onSort('currentValue')}
               >
-                当前价值 <SortIcon field="currentValue" />
+                当前价值 <SortIcon field="currentValue" sortField={sortField} sortOrder={sortOrder} />
               </th>
               <th 
                 className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                 onClick={() => onSort('profit')}
               >
-                收益 <SortIcon field="profit" />
+                收益 <SortIcon field="profit" sortField={sortField} sortOrder={sortOrder} />
               </th>
               <th 
                 className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                 onClick={() => onSort('profitRate')}
               >
-                收益率 <SortIcon field="profitRate" />
+                收益率 <SortIcon field="profitRate" sortField={sortField} sortOrder={sortOrder} />
               </th>
               <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 操作

@@ -68,6 +68,20 @@ function App() {
     }
   }, []);
 
+  const handleRefresh = useCallback(async (silent = false) => {
+    if (!silent) setRefreshing(true);
+    try {
+      await fundApi.refreshData();
+      await loadData(false);
+      if (!silent) setSuccess('数据刷新成功');
+    } catch (err) {
+      console.error('Failed to refresh:', err);
+      if (!silent) setError('刷新数据失败');
+    } finally {
+      if (!silent) setRefreshing(false);
+    }
+  }, [loadData]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -88,21 +102,7 @@ function App() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [settings.autoRefresh, settings.refreshInterval]);
-
-  const handleRefresh = async (silent = false) => {
-    if (!silent) setRefreshing(true);
-    try {
-      await fundApi.refreshData();
-      await loadData(false);
-      if (!silent) setSuccess('数据刷新成功');
-    } catch (err) {
-      console.error('Failed to refresh:', err);
-      if (!silent) setError('刷新数据失败');
-    } finally {
-      if (!silent) setRefreshing(false);
-    }
-  };
+  }, [settings.autoRefresh, settings.refreshInterval, handleRefresh]);
 
   const handleAddFund = async (data: FundFormData) => {
     setSubmitting(true);

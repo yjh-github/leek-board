@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea } from 'recharts';
 import type { HistoryData, HistoryStats, PeriodType } from '../api';
 
@@ -17,6 +17,11 @@ export function FundChartModal({ fundCode, fundName, onClose, onLoad }: FundChar
   const [showDrawdown, setShowDrawdown] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
+  const handleClose = useCallback(() => {
+    setIsVisible(false);
+    setTimeout(onClose, 200);
+  }, [onClose]);
+
   useEffect(() => {
     requestAnimationFrame(() => setIsVisible(true));
     
@@ -25,7 +30,7 @@ export function FundChartModal({ fundCode, fundName, onClose, onLoad }: FundChar
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, []);
+  }, [handleClose]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -42,11 +47,6 @@ export function FundChartModal({ fundCode, fundName, onClose, onLoad }: FundChar
     };
     loadData();
   }, [fundCode, period, onLoad]);
-
-  const handleClose = () => {
-    setIsVisible(false);
-    setTimeout(onClose, 200);
-  };
 
   const chartData = data.map(item => ({
     date: item.date.slice(5),

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Fund, FundFormData } from '../types';
 
 interface FundFormProps {
@@ -8,27 +8,39 @@ interface FundFormProps {
   submitting?: boolean;
 }
 
-export function FundForm({ fund, onSubmit, onClose, submitting }: FundFormProps) {
-  const [formData, setFormData] = useState<FundFormData>({
+function getInitialFormData(fund?: Fund | null): FundFormData {
+  if (fund) {
+    return {
+      fundCode: fund.fundCode,
+      fundName: fund.fundName,
+      cost: fund.cost,
+      shares: fund.shares,
+      note: fund.note || '',
+    };
+  }
+  return {
     fundCode: '',
     fundName: '',
     cost: 0,
     shares: 0,
     note: '',
-  });
+  };
+}
+
+export function FundForm({ fund, onSubmit, onClose, submitting }: FundFormProps) {
+  const initialData = useMemo(() => getInitialFormData(fund), [fund]);
+  const [formData, setFormData] = useState<FundFormData>(initialData);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    if (fund) {
-      setFormData({
-        fundCode: fund.fundCode,
-        fundName: fund.fundName,
-        cost: fund.cost,
-        shares: fund.shares,
-        note: fund.note || '',
-      });
-    }
-  }, [fund]);
+    setFormData(initialData);
+  }, [initialData]);
+
+  const handleClose = useCallback(() => {
+    if (submitting) return;
+    setIsVisible(false);
+    setTimeout(onClose, 200);
+  }, [submitting, onClose]);
 
   useEffect(() => {
     requestAnimationFrame(() => setIsVisible(true));
@@ -38,13 +50,7 @@ export function FundForm({ fund, onSubmit, onClose, submitting }: FundFormProps)
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [submitting]);
-
-  const handleClose = () => {
-    if (submitting) return;
-    setIsVisible(false);
-    setTimeout(onClose, 200);
-  };
+  }, [submitting, handleClose]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
