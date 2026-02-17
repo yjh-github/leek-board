@@ -1,4 +1,5 @@
-import type { Fund } from '../types';
+import type { Fund, UserSettings } from '../types';
+import { DEFAULT_TAGS } from '../types';
 
 interface FundTableProps {
   funds: Fund[];
@@ -8,6 +9,7 @@ interface FundTableProps {
   sortField: string | null;
   sortOrder: 'asc' | 'desc';
   onSort: (field: string) => void;
+  settings: UserSettings;
 }
 
 interface SortIconProps {
@@ -23,7 +25,20 @@ function SortIcon({ field, sortField, sortOrder }: SortIconProps) {
   return <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>;
 }
 
-export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart, sortField, sortOrder, onSort }: FundTableProps) {
+function TagBadge({ tag }: { tag: string }) {
+  const tagConfig = DEFAULT_TAGS.find(t => t.value === tag) || {
+    value: tag,
+    color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+  };
+  
+  return (
+    <span className={`px-1.5 py-0.5 text-xs rounded-full ${tagConfig.color}`}>
+      {tag}
+    </span>
+  );
+}
+
+export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart, sortField, sortOrder, onSort, settings }: FundTableProps) {
   const formatNumber = (num: number | string, decimals = 2) => {
     const value = typeof num === 'string' ? parseFloat(num) : num;
     return isNaN(value) ? '0.00' : value.toFixed(decimals);
@@ -40,6 +55,12 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
     }
     return bValue - aValue;
   });
+
+  const pageSize = settings.pageSize || 10;
+  const totalPages = Math.ceil(sortedFunds.length / pageSize);
+  const currentPage = 1;
+
+  const paginatedFunds = sortedFunds.slice(0, pageSize);
 
   if (originalFunds.length === 0) {
     return (
@@ -65,7 +86,7 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
                 基金名称
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                备注
+                标签
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 持仓成本
@@ -106,10 +127,11 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {sortedFunds.map((fund) => {
+            {paginatedFunds.map((fund) => {
               const isProfit = parseFloat(fund.profit) >= 0;
               const dailyChange = parseFloat(fund.dailyChange.toString());
               const isDailyUp = dailyChange >= 0;
+              const tags = fund.tags ? fund.tags.split(',').filter(t => t) : [];
 
               return (
                 <tr 
@@ -129,8 +151,14 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
                       <span className="text-xs opacity-0 group-hover:opacity-50 transition-opacity">📊</span>
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-[100px] truncate" title={fund.note}>
-                    {fund.note || '-'}
+                  <td className="px-4 py-3 text-sm">
+                    <div className="flex flex-wrap gap-1">
+                      {tags.length > 0 ? (
+                        tags.map(tag => <TagBadge key={tag} tag={tag} />)
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500">-</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-300">
                     ¥{formatNumber(fund.cost, 5)}
@@ -181,7 +209,12 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
       </div>
       <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400 flex justify-between items-center">
         <span>共 {originalFunds.length} 只基金 · 双击行编辑</span>
-        <span>最后更新: {originalFunds[0]?.lastUpdateDate || '-'}</span>
+        <div className="flex items-center gap-2">
+          {totalPages > 1 && (
+            <span>第 {currentPage}/{totalPages} 页</span>
+          )}
+          <span>最后更新: {originalFunds[0]?.lastUpdateDate || '-'}</span>
+        </div>
       </div>
     </div>
   );

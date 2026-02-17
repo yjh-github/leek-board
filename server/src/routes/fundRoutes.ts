@@ -47,7 +47,7 @@ router.get('/funds', async (req: Request, res: Response) => {
 
 router.post('/funds', async (req: Request, res: Response) => {
   try {
-    const { fundCode, fundName, cost, shares, note } = req.body;
+    const { fundCode, fundName, cost, shares, note, tags } = req.body;
     
     const existingFund = await fundRepository()
       .createQueryBuilder('f')
@@ -69,7 +69,7 @@ router.post('/funds', async (req: Request, res: Response) => {
       }
     }
 
-    const fund = fundRepository().create({ fundCode, fundName: finalFundName, cost, shares, note });
+    const fund = fundRepository().create({ fundCode, fundName: finalFundName, cost, shares, note, tags: tags || '' });
     await fundRepository().save(fund);
     
     res.json(fund);
@@ -82,7 +82,7 @@ router.post('/funds', async (req: Request, res: Response) => {
 router.put('/funds/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { fundCode, fundName, cost, shares, note } = req.body;
+    const { fundCode, fundName, cost, shares, note, tags } = req.body;
     
     const fund = await fundRepository().findOne({ where: { id: parseInt(id as string) } });
     if (!fund) {
@@ -94,6 +94,7 @@ router.put('/funds/:id', async (req: Request, res: Response) => {
     fund.cost = cost !== undefined ? cost : fund.cost;
     fund.shares = shares !== undefined ? shares : fund.shares;
     fund.note = note !== undefined ? note : fund.note;
+    fund.tags = tags !== undefined ? tags : fund.tags;
     
     await fundRepository().save(fund);
     res.json(fund);

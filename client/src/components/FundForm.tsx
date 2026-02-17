@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Fund, FundFormData } from '../types';
+import { DEFAULT_TAGS } from '../types';
 
 interface FundFormProps {
   fund?: Fund | null;
@@ -16,6 +17,7 @@ function getInitialFormData(fund?: Fund | null): FundFormData {
       cost: fund.cost,
       shares: fund.shares,
       note: fund.note || '',
+      tags: fund.tags || '',
     };
   }
   return {
@@ -24,6 +26,7 @@ function getInitialFormData(fund?: Fund | null): FundFormData {
     cost: 0,
     shares: 0,
     note: '',
+    tags: '',
   };
 }
 
@@ -79,6 +82,15 @@ export function FundForm({ fund, onSubmit, onClose, submitting }: FundFormProps)
     setCodeError(validation.message);
   };
 
+  const toggleTag = (tagValue: string) => {
+    const currentTags = formData.tags ? formData.tags.split(',').filter(t => t) : [];
+    if (currentTags.includes(tagValue)) {
+      setFormData({ ...formData, tags: currentTags.filter(t => t !== tagValue).join(',') });
+    } else {
+      setFormData({ ...formData, tags: [...currentTags, tagValue].join(',') });
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const validation = validateFundCode(formData.fundCode);
@@ -89,6 +101,8 @@ export function FundForm({ fund, onSubmit, onClose, submitting }: FundFormProps)
     }
     onSubmit(formData);
   };
+
+  const selectedTags = formData.tags ? formData.tags.split(',').filter(t => t) : [];
 
   return (
     <div 
@@ -194,6 +208,29 @@ export function FundForm({ fund, onSubmit, onClose, submitting }: FundFormProps)
                   required
                   min={0}
                 />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                标签
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {DEFAULT_TAGS.map((tag) => (
+                  <button
+                    key={tag.value}
+                    type="button"
+                    onClick={() => toggleTag(tag.value)}
+                    disabled={submitting}
+                    className={`px-2.5 py-1 text-xs rounded-full transition-all ${
+                      selectedTags.includes(tag.value)
+                        ? tag.color + ' ring-2 ring-offset-1'
+                        : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {tag.value}
+                  </button>
+                ))}
               </div>
             </div>
 

@@ -20,6 +20,9 @@ export class Fund {
   @Column({ length: 200, nullable: true })
   note: string;
 
+  @Column({ length: 500, nullable: true, default: '' })
+  tags: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -388,6 +388,7 @@ function App() {
           sortField={settings.sortField}
           sortOrder={settings.sortOrder}
           onSort={handleSort}
+          settings={settings}
         />
         
         {searchKeyword && filteredFunds.length === 0 && (
