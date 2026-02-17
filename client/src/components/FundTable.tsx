@@ -43,14 +43,17 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
 
   if (originalFunds.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-        <p className="text-gray-500 dark:text-gray-400">暂无基金数据，请添加基金</p>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+        <div className="text-6xl mb-4">📊</div>
+        <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-2">还没有添加基金</h3>
+        <p className="text-gray-500 dark:text-gray-400 mb-4">点击上方"添加"按钮或按 <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs font-mono">N</kbd> 键添加第一只基金</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500">示例基金代码：161039、110022、519778</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-16">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-700">
@@ -109,7 +112,11 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
               const isDailyUp = dailyChange >= 0;
 
               return (
-                <tr key={fund.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <tr 
+                  key={fund.id} 
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+                  onDoubleClick={() => onEdit(fund)}
+                >
                   <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 font-mono">
                     {fund.fundCode}
                   </td>
@@ -119,7 +126,7 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
                       className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors text-left flex items-center gap-1"
                     >
                       {fund.fundName}
-                      <span className="text-xs opacity-50">📊</span>
+                      <span className="text-xs opacity-0 group-hover:opacity-50 transition-opacity">📊</span>
                     </button>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-[100px] truncate" title={fund.note}>
@@ -148,16 +155,22 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button
-                      onClick={() => onEdit(fund)}
-                      className="text-blue-500 hover:text-blue-700 text-sm mr-2"
+                      onClick={(e) => { e.stopPropagation(); onEdit(fund); }}
+                      className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                      title="编辑"
                     >
-                      编辑
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
                     </button>
                     <button
-                      onClick={() => onDelete(fund)}
-                      className="text-red-500 hover:text-red-700 text-sm"
+                      onClick={(e) => { e.stopPropagation(); onDelete(fund); }}
+                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                      title="删除"
                     >
-                      删除
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
                     </button>
                   </td>
                 </tr>
@@ -167,8 +180,8 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
         </table>
       </div>
       <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400 flex justify-between items-center">
-        <span>共 {originalFunds.length} 只基金</span>
-        <span>最后更新: {originalFunds[0]?.lastUpdateDate || '-'} | 点击基金名称查看走势</span>
+        <span>共 {originalFunds.length} 只基金 · 双击行编辑</span>
+        <span>最后更新: {originalFunds[0]?.lastUpdateDate || '-'}</span>
       </div>
     </div>
   );

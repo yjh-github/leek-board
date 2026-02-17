@@ -10,6 +10,7 @@ import { SearchFilter, type FilterType } from './components/SearchFilter';
 import { Toast, type ToastMessage } from './components/Toast';
 import { createToast } from './toastUtils';
 import { ConfirmModal } from './components/ConfirmModal';
+import { useKeyboardShortcuts, SHORTCUTS } from './hooks/useKeyboardShortcuts';
 
 function App() {
   const [funds, setFunds] = useState<Fund[]>([]);
@@ -265,6 +266,15 @@ function App() {
     return result;
   }, [funds, searchKeyword, filterType]);
 
+  const hasOpenModal = showForm || editingFund || chartModal || deleteConfirm;
+
+  useKeyboardShortcuts({
+    onAdd: () => setShowForm(true),
+    onRefresh: () => handleRefresh(),
+    onToggleDark: () => saveSettings({ darkMode: !settings.darkMode }),
+    enabled: !hasOpenModal && !loading,
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
@@ -295,7 +305,7 @@ function App() {
             <button
               onClick={() => saveSettings({ darkMode: !settings.darkMode })}
               className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              title={settings.darkMode ? '切换到浅色模式' : '切换到深色模式'}
+              title={`切换${settings.darkMode ? '浅色' : '深色'}模式 (D)`}
             >
               {settings.darkMode ? '☀️' : '🌙'}
             </button>
@@ -340,6 +350,7 @@ function App() {
               onClick={() => handleRefresh()}
               disabled={refreshing}
               className="px-4 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 disabled:bg-blue-300 transition-colors flex items-center gap-1.5"
+              title="刷新数据 (R)"
             >
               <svg 
                 className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} 
@@ -354,6 +365,7 @@ function App() {
             <button
               onClick={() => setShowForm(true)}
               className="px-4 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition-colors"
+              title="添加基金 (N)"
             >
               添加
             </button>
@@ -384,6 +396,20 @@ function App() {
           </div>
         )}
       </main>
+
+      <footer className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-2 px-4 z-30">
+        <div className="max-w-7xl mx-auto flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex gap-4">
+            {SHORTCUTS.map(({ key, description }) => (
+              <span key={key} className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs font-mono">{key}</kbd>
+                <span>{description}</span>
+              </span>
+            ))}
+          </div>
+          <span>共 {funds.length} 只基金</span>
+        </div>
+      </footer>
 
       {(showForm || editingFund) && (
         <FundForm
