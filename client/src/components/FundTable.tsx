@@ -3,7 +3,7 @@ import type { Fund } from '../types';
 interface FundTableProps {
   funds: Fund[];
   onEdit: (fund: Fund) => void;
-  onDelete: (id: number) => void;
+  onDelete: (fund: Fund) => void;
   onViewChart: (fund: Fund) => void;
   sortField: string | null;
   sortOrder: 'asc' | 'desc';
@@ -154,7 +154,7 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
                       编辑
                     </button>
                     <button
-                      onClick={() => onDelete(fund.id)}
+                      onClick={() => onDelete(fund)}
                       className="text-red-500 hover:text-red-700 text-sm"
                     >
                       删除
@@ -166,8 +166,9 @@ export function FundTable({ funds: originalFunds, onEdit, onDelete, onViewChart,
           </tbody>
         </table>
       </div>
-      <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400 text-right">
-        最后更新: {originalFunds[0]?.lastUpdateDate || '-'} | 点击基金名称查看走势
+      <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400 flex justify-between items-center">
+        <span>共 {originalFunds.length} 只基金</span>
+        <span>最后更新: {originalFunds[0]?.lastUpdateDate || '-'} | 点击基金名称查看走势</span>
       </div>
     </div>
   );

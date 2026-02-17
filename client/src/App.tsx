@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Fund, FundFormData, FundStats, UserSettings } from './types';
 import { fundApi, settingsApi, cacheApi, type ExportData, type HistoryData, type HistoryStats, type PeriodType } from './api';
 import { StatsCard } from './components/StatsCard';
@@ -6,6 +6,10 @@ import { FundTable } from './components/FundTable';
 import { FundForm } from './components/FundForm';
 import { ProfitChart } from './components/ProfitChart';
 import { FundChartModal } from './components/FundChartModal';
+import { SearchFilter, type FilterType } from './components/SearchFilter';
+import { Toast, type ToastMessage } from './components/Toast';
+import { createToast } from './toastUtils';
+import { ConfirmModal } from './components/ConfirmModal';
 
 function App() {
   const [funds, setFunds] = useState<Fund[]>([]);
@@ -17,12 +21,26 @@ function App() {
   const [showForm, setShowForm] = useState(false);
   const [editingFund, setEditingFund] = useState<Fund | null>(null);
   const [chartModal, setChartModal] = useState<Fund | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [settings, setSettings] = useState<UserSettings>(settingsApi.getSettings());
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [deleteConfirm, setDeleteConfirm] = useState<Fund | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const addToast = useCallback((type: ToastMessage['type'], message: string) => {
+    const toast = createToast(type, message);
+    setToasts(prev => [...prev, toast]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== toast.id));
+    }, 4000);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   useEffect(() => {
     if (settings.darkMode) {
@@ -40,8 +58,6 @@ function App() {
 
   const loadData = useCallback(async (useCache = true) => {
     try {
-      setError(null);
-      
       if (useCache) {
         const cached = cacheApi.getCache();
         if (cached) {
@@ -62,25 +78,25 @@ function App() {
       cacheApi.setCache({ funds: fundsData, stats: statsData });
     } catch (err) {
       console.error('Failed to load data:', err);
-      setError('加载数据失败，请检查后端服务是否启动');
+      addToast('error', '加载数据失败，请检查后端服务是否启动');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [addToast]);
 
   const handleRefresh = useCallback(async (silent = false) => {
     if (!silent) setRefreshing(true);
     try {
       await fundApi.refreshData();
       await loadData(false);
-      if (!silent) setSuccess('数据刷新成功');
+      if (!silent) addToast('success', '数据刷新成功');
     } catch (err) {
       console.error('Failed to refresh:', err);
-      if (!silent) setError('刷新数据失败');
+      if (!silent) addToast('error', '刷新数据失败');
     } finally {
       if (!silent) setRefreshing(false);
     }
-  }, [loadData]);
+  }, [loadData, addToast]);
 
   useEffect(() => {
     loadData();
@@ -106,18 +122,17 @@ function App() {
 
   const handleAddFund = async (data: FundFormData) => {
     setSubmitting(true);
-    setError(null);
     try {
       await fundApi.addFund(data);
       await fundApi.refreshData();
       await loadData(false);
       setShowForm(false);
-      setSuccess('基金添加成功');
+      addToast('success', '基金添加成功');
     } catch (err: unknown) {
       console.error('Failed to add fund:', err);
       const errorObj = err as { response?: { data?: { error?: string } }; message?: string };
       const msg = errorObj?.response?.data?.error || errorObj?.message || '添加失败';
-      setError(msg);
+      addToast('error', msg);
     } finally {
       setSubmitting(false);
     }
@@ -126,32 +141,36 @@ function App() {
   const handleEditFund = async (data: FundFormData) => {
     if (!editingFund) return;
     setSubmitting(true);
-    setError(null);
     try {
       await fundApi.updateFund(editingFund.id, data);
       await loadData(false);
       setEditingFund(null);
-      setSuccess('基金更新成功');
+      addToast('success', '基金更新成功');
     } catch (err: unknown) {
       console.error('Failed to update fund:', err);
       const errorObj = err as { response?: { data?: { error?: string } } };
-      setError(errorObj?.response?.data?.error || '更新失败');
+      addToast('error', errorObj?.response?.data?.error || '更新失败');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteFund = async (id: number) => {
-    if (!confirm('确定要删除这只基金吗？')) return;
-    setError(null);
+  const handleDeleteFund = async (fund: Fund) => {
+    setDeleteConfirm(fund);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
     try {
-      await fundApi.deleteFund(id);
+      await fundApi.deleteFund(deleteConfirm.id);
       await loadData(false);
-      setSuccess('基金删除成功');
+      addToast('success', '基金删除成功');
     } catch (err: unknown) {
       console.error('Failed to delete fund:', err);
       const errorObj = err as { response?: { data?: { error?: string } } };
-      setError(errorObj?.response?.data?.error || '删除失败');
+      addToast('error', errorObj?.response?.data?.error || '删除失败');
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
@@ -171,10 +190,10 @@ function App() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      setSuccess('数据导出成功');
+      addToast('success', '数据导出成功');
     } catch (err) {
       console.error('Failed to export:', err);
-      setError('导出失败');
+      addToast('error', '导出失败');
     }
   };
 
@@ -187,16 +206,16 @@ function App() {
       const data: ExportData = JSON.parse(text);
       
       if (!data.funds || !Array.isArray(data.funds)) {
-        setError('无效的数据格式');
+        addToast('error', '无效的数据格式');
         return;
       }
 
       const result = await fundApi.importData(data);
       await loadData(false);
-      setSuccess(`导入成功：${result.importedFunds} 只基金，${result.importedDailyData} 条历史数据`);
+      addToast('success', `导入成功：${result.importedFunds} 只基金，${result.importedDailyData} 条历史数据`);
     } catch (err) {
       console.error('Failed to import:', err);
-      setError('导入失败，请检查文件格式');
+      addToast('error', '导入失败，请检查文件格式');
     } finally {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -212,22 +231,50 @@ function App() {
     }
   };
 
+  const handleSearch = useCallback((keyword: string) => {
+    setSearchKeyword(keyword);
+  }, []);
+
+  const handleFilter = useCallback((filter: FilterType) => {
+    setFilterType(filter);
+  }, []);
+
   const closeForm = () => {
     setShowForm(false);
     setEditingFund(null);
   };
 
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(null), 3000);
-      return () => clearTimeout(timer);
+  const filteredFunds = useMemo(() => {
+    let result = funds;
+    
+    if (searchKeyword) {
+      const keyword = searchKeyword.toLowerCase();
+      result = result.filter(fund => 
+        fund.fundCode.includes(keyword) || 
+        fund.fundName.toLowerCase().includes(keyword) ||
+        (fund.note && fund.note.toLowerCase().includes(keyword))
+      );
     }
-  }, [success]);
+    
+    if (filterType === 'profit') {
+      result = result.filter(fund => parseFloat(fund.profit) >= 0);
+    } else if (filterType === 'loss') {
+      result = result.filter(fund => parseFloat(fund.profit) < 0);
+    }
+    
+    return result;
+  }, [funds, searchKeyword, filterType]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-        <div className="text-gray-500 dark:text-gray-400">加载中...</div>
+        <div className="flex flex-col items-center gap-3">
+          <svg className="w-8 h-8 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+          </svg>
+          <div className="text-gray-500 dark:text-gray-400">加载中...</div>
+        </div>
       </div>
     );
   }
@@ -235,8 +282,15 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors">
       <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-white">基金看板</h1>
+        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center gap-4">
+          <h1 className="text-xl font-bold text-gray-800 dark:text-white whitespace-nowrap">基金看板</h1>
+          
+          <SearchFilter 
+            onSearch={handleSearch}
+            onFilter={handleFilter}
+            currentFilter={filterType}
+          />
+          
           <div className="flex gap-2 items-center flex-wrap">
             <button
               onClick={() => saveSettings({ darkMode: !settings.darkMode })}
@@ -308,19 +362,6 @@ function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-4">
-        {error && (
-          <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4 animate-fadeIn">
-            {error}
-            <button onClick={() => setError(null)} className="float-right font-bold">&times;</button>
-          </div>
-        )}
-        
-        {success && (
-          <div className="bg-green-100 dark:bg-green-900/30 border border-green-400 text-green-700 dark:text-green-300 px-4 py-3 rounded-lg mb-4 animate-fadeIn">
-            {success}
-          </div>
-        )}
-        
         <StatsCard stats={stats} funds={funds} />
         
         <div className="mb-4">
@@ -328,7 +369,7 @@ function App() {
         </div>
         
         <FundTable 
-          funds={funds} 
+          funds={filteredFunds} 
           onEdit={setEditingFund}
           onDelete={handleDeleteFund}
           onViewChart={setChartModal}
@@ -336,6 +377,12 @@ function App() {
           sortOrder={settings.sortOrder}
           onSort={handleSort}
         />
+        
+        {searchKeyword && filteredFunds.length === 0 && (
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            未找到匹配 "{searchKeyword}" 的基金
+          </div>
+        )}
       </main>
 
       {(showForm || editingFund) && (
@@ -355,6 +402,20 @@ function App() {
           onLoad={loadFundHistory}
         />
       )}
+
+      {deleteConfirm && (
+        <ConfirmModal
+          title="删除基金"
+          message={`确定要删除 "${deleteConfirm.fundName}" 吗？此操作不可恢复。`}
+          confirmText="删除"
+          cancelText="取消"
+          confirmStyle="danger"
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
+
+      <Toast toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

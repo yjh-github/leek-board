@@ -27,10 +27,22 @@ function getInitialFormData(fund?: Fund | null): FundFormData {
   };
 }
 
+function validateFundCode(code: string): { valid: boolean; message: string } {
+  if (!code) {
+    return { valid: false, message: '请输入基金代码' };
+  }
+  if (!/^\d{6}$/.test(code)) {
+    return { valid: false, message: '基金代码应为6位数字' };
+  }
+  return { valid: true, message: '' };
+}
+
 export function FundForm({ fund, onSubmit, onClose, submitting }: FundFormProps) {
   const initialData = useMemo(() => getInitialFormData(fund), [fund]);
   const [formData, setFormData] = useState<FundFormData>(initialData);
   const [isVisible, setIsVisible] = useState(false);
+  const [codeError, setCodeError] = useState<string>('');
+  const [touched, setTouched] = useState(false);
 
   useEffect(() => {
     setFormData(initialData);
@@ -52,8 +64,29 @@ export function FundForm({ fund, onSubmit, onClose, submitting }: FundFormProps)
     return () => window.removeEventListener('keydown', handleEsc);
   }, [submitting, handleClose]);
 
+  const handleCodeChange = (value: string) => {
+    const filtered = value.replace(/\D/g, '').slice(0, 6);
+    setFormData({ ...formData, fundCode: filtered });
+    if (touched) {
+      const validation = validateFundCode(filtered);
+      setCodeError(validation.message);
+    }
+  };
+
+  const handleCodeBlur = () => {
+    setTouched(true);
+    const validation = validateFundCode(formData.fundCode);
+    setCodeError(validation.message);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const validation = validateFundCode(formData.fundCode);
+    if (!validation.valid) {
+      setCodeError(validation.message);
+      setTouched(true);
+      return;
+    }
     onSubmit(formData);
   };
 
@@ -85,17 +118,30 @@ export function FundForm({ fund, onSubmit, onClose, submitting }: FundFormProps)
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                基金代码
+                基金代码 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={formData.fundCode}
-                onChange={(e) => setFormData({ ...formData, fundCode: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors"
-                placeholder="例如: 161039"
+                onChange={(e) => handleCodeChange(e.target.value)}
+                onBlur={handleCodeBlur}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors ${
+                  codeError 
+                    ? 'border-red-500 focus:ring-red-500' 
+                    : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                }`}
+                placeholder="请输入6位数字基金代码"
                 disabled={!!fund || submitting}
-                required
+                maxLength={6}
               />
+              {codeError && (
+                <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {codeError}
+                </p>
+              )}
               {fund && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">基金代码不可修改</p>}
             </div>
             
@@ -118,7 +164,7 @@ export function FundForm({ fund, onSubmit, onClose, submitting }: FundFormProps)
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  持仓成本
+                  持仓成本 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -129,12 +175,13 @@ export function FundForm({ fund, onSubmit, onClose, submitting }: FundFormProps)
                   placeholder="买入净值"
                   disabled={submitting}
                   required
+                  min={0}
                 />
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  持有份额
+                  持有份额 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -145,6 +192,7 @@ export function FundForm({ fund, onSubmit, onClose, submitting }: FundFormProps)
                   placeholder="份额"
                   disabled={submitting}
                   required
+                  min={0}
                 />
               </div>
             </div>
